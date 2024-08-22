@@ -200,14 +200,14 @@ function processMessage(message : string){
 
         const actionCreateRoom: ServerResponse = {
             type: "RoomCreated",
-            parameters: {creator : action.actor}
+            parameters: {creator : action.actor, roomName: room.name}
         }
         players_WS[action.actor].send(JSON.stringify(actionCreateRoom));
     }
 
     if(action.type == "JoinRoom"){
-        for (const [nameRoom, room] of Object.entries(rooms)) {
-            if(nameRoom == action.parameters.nameRoom){
+        for (const [roomName, room] of Object.entries(rooms)) {
+            if(roomName == action.parameters.roomName){
                 if(room.state){
                     room.player2 = action.parameters.playerName;
                     room.state = false;
@@ -235,21 +235,31 @@ function processMessage(message : string){
     }
 
     if(action.type == "ExitRoom"){
-        for (const [nameRoom, room] of Object.entries(rooms)) {
-            if(action.parameters.username == nameRoom)
+        for (const [roomName, room] of Object.entries(rooms)) {
+            if(action.parameters.room == room)
             {
-                if(room.player2 != "-")
+                if(action.parameters.playerName == room.player1)
                 {
                     room.player1 = room.player2;
                     room.player2 = "-";
+                    const actionExitRoom: ServerResponse = {
+                        type: "ExitRoomSucessFul",
+                        parameters: {player1Name : room.player1, player2Name: room.player2}
+                    }
+                    players_WS[action.actor].send(JSON.stringify(actionExitRoom));
                 }
                 else
                 {
-                    delete rooms[nameRoom];
+                    delete rooms[roomName];
+                    const actionExitRoom: ServerResponse = {
+                        type: "ExitRoomSucessful",
+                        parameters: {player1Name : room.player1, player2Name: room.player2}
+                    }
+                    players_WS[action.actor].send(JSON.stringify(actionExitRoom));
                 }
                 break;
             }
-            else if(action.parameters.username == nameRoom)
+            else if(action.parameters.username == roomName)
             {
                 room.player2 = "-";
                 break;
