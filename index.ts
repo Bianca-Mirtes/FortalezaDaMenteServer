@@ -29,7 +29,6 @@ interface ServerResponse {
 const players_WS: Record<string, any> = {};
 const players_OBJ: Record<string, any> = {};
 const rooms: Record<string, any> = {};
-var count=0;
 
 const wss = new Websocket.Server({port: 9000})
 
@@ -144,7 +143,7 @@ function processMessage(message : string){
                         return;
                     }
                 }
-                else{
+                else{ // caso o email esteja incorreto
                     console.log("Authentication Fail: Email Incorrect");
                     const LoginAction: ServerResponse = {
                         type: "LoginFail_EmailIncorrect",
@@ -154,7 +153,7 @@ function processMessage(message : string){
                     return;
                 }
             }
-        }
+        } // usuario não existe nos registros
         console.log("Authentication Fail: User not exist");
         const LoginAction: ServerResponse = {
             type: "LoginFail_UserNotRegistered",
@@ -240,29 +239,19 @@ function processMessage(message : string){
             {
                 if(action.parameters.playerName == room.player1)
                 {
-                    room.player1 = room.player2;
-                    room.player2 = "-";
+                    if(room.player2 != "-"){ // caso exista o player 2
+                        room.player1 = room.player2;
+                        room.player2 = "-";
+                    }else{ // caso não exista
+                        delete rooms[roomName];
+                    }
                     const actionExitRoom: ServerResponse = {
                         type: "ExitRoomSucessFul",
                         parameters: {player1Name : room.player1, player2Name: room.player2}
                     }
                     players_WS[action.actor].send(JSON.stringify(actionExitRoom));
                 }
-                else
-                {
-                    delete rooms[roomName];
-                    const actionExitRoom: ServerResponse = {
-                        type: "ExitRoomSucessful",
-                        parameters: {player1Name : room.player1, player2Name: room.player2}
-                    }
-                    players_WS[action.actor].send(JSON.stringify(actionExitRoom));
-                }
-                break;
-            }
-            else if(action.parameters.username == roomName)
-            {
-                room.player2 = "-";
-                break;
+                return;
             }
         }
     }
