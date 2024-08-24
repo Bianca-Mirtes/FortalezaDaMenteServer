@@ -81,8 +81,6 @@ wss.on('connection', function connection(ws){
                         }else{ // caso não exista, deleta a sala
                             delete rooms[roomName];
                         }
-                        console.log(room);
-                        break;
                     }else{
                         // manda para quem sobrou na sala
                         room.player2 = "-";
@@ -91,10 +89,10 @@ wss.on('connection', function connection(ws){
                             parameters: {playerName : room.player2}
                         }
                         players_WS[room.player1].send(JSON.stringify(actionExitRoom2));
-    
-                        console.log(room);
-                        break;
                     }
+                    delete players_WS[playerId];
+                    delete players_OBJ[playerId];
+                    return;
                 }
                 delete players_WS[playerId];
                 delete players_OBJ[playerId];
@@ -300,7 +298,7 @@ function processMessage(message : string){
                     }else{ // caso não exista, deleta a sala
                         delete rooms[roomName];
                     }
-                    console.log(room);
+                    console.log(rooms);
                     return;
                 }else{
                     // manda para quem saiu da sala
@@ -317,8 +315,7 @@ function processMessage(message : string){
                         parameters: {playerName : room.player2}
                     }
                     players_WS[room.player1].send(JSON.stringify(actionExitRoom2));
-
-                    console.log(room);
+                    console.log(rooms);
                     return;
                 }
             }
