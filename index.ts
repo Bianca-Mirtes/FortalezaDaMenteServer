@@ -67,8 +67,38 @@ wss.on('connection', function connection(ws){
         console.log("close")
         for (const [playerId, playerWS] of Object.entries(players_WS)) {
             if(playerWS == ws){
+                for (const [roomName, room] of Object.entries(rooms)) {
+                    if(playerId == room.player1){
+                        if(room.player2 != "-"){ // caso exista o player 2
+                            // manda para quem sobrou na sala
+                            const actionExitRoom2: ServerResponse = {
+                                type: "ExitedSomethingOfTheRoom",
+                                parameters: {playerName : room.player1}
+                            }
+                            players_WS[room.player2].send(JSON.stringify(actionExitRoom2));
+                            room.player1 = room.player2;
+                            room.player2 = "-";
+                        }else{ // caso não exista, deleta a sala
+                            delete rooms[roomName];
+                        }
+                        console.log(room);
+                        break;
+                    }else{
+                        // manda para quem sobrou na sala
+                        room.player2 = "-";
+                        const actionExitRoom2: ServerResponse = {
+                            type: "ExitedSomethingOfTheRoom",
+                            parameters: {playerName : room.player2}
+                        }
+                        players_WS[room.player1].send(JSON.stringify(actionExitRoom2));
+    
+                        console.log(room);
+                        break;
+                    }
+                }
                 delete players_WS[playerId];
                 delete players_OBJ[playerId];
+                return;
             }
         }
       })
@@ -224,6 +254,7 @@ function processMessage(message : string){
                                 parameters: {player2: players_OBJ[room.player2].username}
                             }
                             playerWs.send(JSON.stringify(actionJoinRoom2));
+                            console.log(room);
                             return;
                         }
                     }
@@ -235,7 +266,6 @@ function processMessage(message : string){
                     players_WS[action.actor].send(JSON.stringify(actionJoinRoom));
                     return;
                 }
-                console.log(room);
             }
         }
         const actionJoinRoom: ServerResponse = {
