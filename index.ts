@@ -65,8 +65,12 @@ wss.on('connection', function connection(ws){
 
     ws.on("close", () => {
         console.log("close")
-        delete players_WS[player.id]
-        delete players_OBJ[player.id];
+        for (const [playerId, playerWS] of Object.entries(players_WS)) {
+            if(playerWS == ws){
+                delete players_WS[playerId];
+                delete players_OBJ[playerId];
+            }
+        }
       })
 });
 6
@@ -95,9 +99,9 @@ function processMessage(message : string){
                 return;
             }
         }
-        playerObj.email = action.parameters.playerEmail;
-        playerObj.password = action.parameters.playerPassword;
-        playerObj.username = action.parameters.playerUsername;
+        playerObj.email = action.parameters.playerEmail.trim();
+        playerObj.password = action.parameters.playerPassword.trim();
+        playerObj.username = action.parameters.playerUsername.trim();
         console.log("Register complete with sucessful");
         const RegisterAction: ServerResponse = {
             type: "RegisterSucessful",
@@ -185,18 +189,13 @@ function processMessage(message : string){
             }
         }
         const room : Room = {
-            name : action.parameters.roomName,
-            player1 : action.parameters.creator,
+            name : action.parameters.roomName.trim(),
+            player1 : action.actor,
             player2 : "-",
-            state : false
+            state : true
         };
-        if(action.parameters.state == "true"){
-            room.state = true;
-        }else{
-            room.state = false;
-        }
         rooms[room.name] = room;
-
+        console.log(room);
         const actionCreateRoom: ServerResponse = {
             type: "RoomCreated",
             parameters: {creator : action.actor, roomName: room.name}
@@ -208,14 +207,26 @@ function processMessage(message : string){
         for (const [roomName, room] of Object.entries(rooms)) {
             if(roomName == action.parameters.roomName){
                 if(room.state){
-                    room.player2 = action.parameters.playerName;
+                    room.player2 = action.actor;
                     room.state = false;
+                    // manda para o usuario que entrou na sala
                     const actionJoinRoom: ServerResponse = {
                         type: "JoinedInRoom",
-                        parameters: {playerID : action.actor}
+                        parameters: {playerID : action.actor, creator: players_OBJ[room.player1].username}
                     }
                     players_WS[action.actor].send(JSON.stringify(actionJoinRoom));
-                    return;
+
+                    // manda para o usuario que criou a sala
+                    for (const [playerId, playerWs] of Object.entries(players_WS)) {
+                        if(room.player1 == playerId){
+                            const actionJoinRoom2: ServerResponse = {
+                                type: "JoinedSomethingInRoom",
+                                parameters: {player2: players_OBJ[room.player2].username}
+                            }
+                            playerWs.send(JSON.stringify(actionJoinRoom2));
+                            return;
+                        }
+                    }
                 }else{
                     const actionJoinRoom: ServerResponse = {
                         type: "RoomComplete",
@@ -235,23 +246,47 @@ function processMessage(message : string){
 
     if(action.type == "ExitRoom"){
         for (const [roomName, room] of Object.entries(rooms)) {
-            if(action.parameters.room == room)
+            if(action.parameters.roomName == roomName)
             {
-                if(action.parameters.playerName == room.player1)
+                if(action.actor == room.player1)
                 {
                     if(room.player2 != "-"){ // caso exista o player 2
+                        // manda para quem saiu da sala
+                        const actionExitRoom: ServerResponse = {
+                            type: "ExitedOfTheRoom",
+                            parameters: {player2Name: room.player2}
+                        }
+                        players_WS[action.actor].send(JSON.stringify(actionExitRoom));
+
+                        // manda para quem sobrou na sala
+                        const actionExitRoom2: ServerResponse = {
+                            type: "ExitedSomethingOfTheRoom",
+                            parameters: {playerName : room.player1}
+                        }
+                        players_WS[room.player2].send(JSON.stringify(actionExitRoom2));
                         room.player1 = room.player2;
                         room.player2 = "-";
-                    }else{ // caso não exista
+                    }else{ // caso não exista, deleta a sala
                         delete rooms[roomName];
                     }
+                    return;
+                }else{
+                    // manda para quem saiu da sala
                     const actionExitRoom: ServerResponse = {
-                        type: "ExitRoomSucessFul",
-                        parameters: {player1Name : room.player1, player2Name: room.player2}
+                        type: "ExitedOfTheRoom",
+                        parameters: {creator: room.player1}
                     }
                     players_WS[action.actor].send(JSON.stringify(actionExitRoom));
+
+                    // manda para quem sobrou na sala
+                    room.player2 = "-";
+                    const actionExitRoom2: ServerResponse = {
+                        type: "ExitedSomethingOfTheRoom",
+                        parameters: {playerName : room.player2}
+                    }
+                    players_WS[room.player1].send(JSON.stringify(actionExitRoom2));
+                    return;
                 }
-                return;
             }
         }
     }
