@@ -235,6 +235,7 @@ function processMessage(message : string){
                     players_WS[action.actor].send(JSON.stringify(actionJoinRoom));
                     return;
                 }
+                console.log(room);
             }
         }
         const actionJoinRoom: ServerResponse = {
@@ -269,6 +270,7 @@ function processMessage(message : string){
                     }else{ // caso não exista, deleta a sala
                         delete rooms[roomName];
                     }
+                    console.log(room);
                     return;
                 }else{
                     // manda para quem saiu da sala
@@ -285,7 +287,20 @@ function processMessage(message : string){
                         parameters: {playerName : room.player2}
                     }
                     players_WS[room.player1].send(JSON.stringify(actionExitRoom2));
+
+                    console.log(room);
                     return;
+                }
+            }
+        }
+    }
+    if(action.type == "UpdateRoom"){
+        for (const [roomName, room] of Object.entries(rooms)) {
+            if(action.parameters.roomName == roomName){
+                if(action.parameters.state == "true"){
+                    room.state = true;
+                }else{
+                    room.state = false;
                 }
             }
         }
