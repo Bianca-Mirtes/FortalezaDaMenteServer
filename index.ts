@@ -88,6 +88,7 @@ wss.on('connection', function connection(ws){
                             type: "ExitedSomethingOfTheRoom",
                             parameters: {playerName : room.player2}
                         }
+                        console.log(room.player1);
                         players_WS[room.player1].send(JSON.stringify(actionExitRoom2));
                     }
                     delete players_WS[playerId];
@@ -216,6 +217,7 @@ function processMessage(message : string){
                 return;
             }
         }
+        console.log(action.actor + "criou a sala: " + action.parameters.roomName)
         const room : Room = {
             name : action.parameters.roomName.trim(),
             player1 : action.actor,
@@ -235,6 +237,7 @@ function processMessage(message : string){
         for (const [roomName, room] of Object.entries(rooms)) {
             if(roomName == action.parameters.roomName){
                 if(room.state){
+                    console.log(action.actor + "entrou na sala: " + roomName)
                     room.player2 = action.actor;
                     room.state = false;
                     // manda para o usuario que entrou na sala
@@ -252,11 +255,10 @@ function processMessage(message : string){
                                 parameters: {player2: players_OBJ[room.player2].username}
                             }
                             playerWs.send(JSON.stringify(actionJoinRoom2));
-                            console.log(room);
                             return;
                         }
                     }
-                }else{
+                }else{ // caso a sala esteja cheia
                     const actionJoinRoom: ServerResponse = {
                         type: "RoomComplete",
                         parameters: {playerID : action.actor}
@@ -265,7 +267,7 @@ function processMessage(message : string){
                     return;
                 }
             }
-        }
+        } // caso a sala não seja encontrada
         const actionJoinRoom: ServerResponse = {
             type: "RoomDontExist",
             parameters: {playerID : action.actor}
@@ -298,9 +300,8 @@ function processMessage(message : string){
                     }else{ // caso não exista, deleta a sala
                         delete rooms[roomName];
                     }
-                    console.log(rooms);
                     return;
-                }else{
+                }else{ // caso seja o player 2
                     // manda para quem saiu da sala
                     const actionExitRoom: ServerResponse = {
                         type: "ExitedOfTheRoom",
@@ -315,7 +316,6 @@ function processMessage(message : string){
                         parameters: {playerName : room.player2}
                     }
                     players_WS[room.player1].send(JSON.stringify(actionExitRoom2));
-                    console.log(rooms);
                     return;
                 }
             }
